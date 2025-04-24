@@ -1,14 +1,11 @@
 package com.kongariClasses.DMS.Controllers;
 
-import java.util.List;
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
-
 import com.kongariClasses.DMS.Models.Dog;
 import com.kongariClasses.DMS.Models.Trainer;
 import com.kongariClasses.DMS.repository.DogRepository;
@@ -16,94 +13,77 @@ import com.kongariClasses.DMS.repository.TrainerRepository;
 
 @Controller
 public class DogController {
-	
-	ModelAndView mv = new ModelAndView();
-	@Autowired
-	DogRepository dogRepo;
-	@Autowired
-	TrainerRepository trainerRepo;
-	
-//	@RequestMapping("dogHome")
-//	public String home() {
-//		return "home"; 
-//	}
-	
-	@RequestMapping("dogHome")
-	public ModelAndView home() {
-		mv.setViewName("home");
-		return mv;
-	}
-	
-	@RequestMapping("add")
-	public ModelAndView add() {
-		mv.setViewName("addNewDog.html");
-		Iterable<Trainer> trainersList = trainerRepo.findAll();
-		mv.addObject("trainers", trainersList);
-		return mv;
-	}
-	
-	@RequestMapping("addNewDog")
-	public ModelAndView addNewDog(Dog dog, @RequestParam("trainerId") int id) {
-		Trainer trainer = trainerRepo.findById(id).orElse(new Trainer());
-		dog.setTrainer(trainer);
-		dogRepo.save(dog);
-		mv.setViewName("home");
-		return mv;
-	}
-	
-	@RequestMapping("addTrainer")
-	public ModelAndView addTrainer() {
-		mv.setViewName("addNewTrainer");
-		return mv;
-	}
-	
-	@RequestMapping("trainerAdded")
-	public ModelAndView addNewTrainer(Trainer trainer) {
-		trainerRepo.save(trainer);
-		mv.setViewName("home");
-		return mv;
-	}
-	
-	@RequestMapping("viewModifyDelete")
-	public ModelAndView viewDogs() {
-		mv.setViewName("viewDogs");
-		Iterable<Dog> dogList = dogRepo.findAll();
-		mv.addObject("dogs", dogList);
-		return mv;
-	}
-	
-	@RequestMapping("editDog")
-	public ModelAndView editDog(Dog dog) {
-		dogRepo.save(dog);
-		mv.setViewName("editDog");
-		return mv;
-	}
-	
-	@RequestMapping("deleteDog")
-	public ModelAndView deleteDog(Dog dog) {
-//		Optional<Dog> dogFound = dogRepo.findById(dog.getId());
-//		if(dogFound.isPresent()) {
-//			dogRepo.delete(dog);
-//		}
-//		return home();
-		
-//		List<Dog> dogsFound = dogRepo.findByName(dog.getName());
-//		for(Dog d:dogsFound) {
-//			dogRepo.delete(d);
-//		}
-//		return home();
-		
-		Dog d = dogRepo.findById(dog.getId()).orElse(new Dog());
-		dogRepo.delete(d);
-		return home();
-	}
-	
-	@RequestMapping("search")
-	public ModelAndView searchById(int id) {
-		Dog dogFound = dogRepo.findById(id).orElse(new Dog());
-		mv.addObject(dogFound);
-		mv.setViewName("searchResults");
-		return mv;
-	}
-	
+
+    @Autowired
+    private DogRepository dogRepo;
+    
+    @Autowired
+    private TrainerRepository trainerRepo;
+
+    /* Home/Index Mappings */
+ // Root endpoint - FIXES WHITE LABEL ERROR
+    @GetMapping("/")
+    public String rootRedirect() {
+        return "redirect:/dogHome";
+    }
+
+    @GetMapping("dogHome")
+    public ModelAndView home() {
+        return new ModelAndView("home");
+    }
+
+    /* Dog Operations */
+    @GetMapping("add")
+    public ModelAndView addDogForm() {
+        ModelAndView mv = new ModelAndView("addNewDog");
+        mv.addObject("trainers", trainerRepo.findAll());
+        return mv;
+    }
+
+    @PostMapping("addNewDog")
+    public ModelAndView addNewDog(Dog dog, @RequestParam("trainerId") int id) {
+        Trainer trainer = trainerRepo.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid trainer ID: " + id));
+        dog.setTrainer(trainer);
+        dogRepo.save(dog);
+        return new ModelAndView("redirect:/dogHome");
+    }
+
+    @GetMapping("viewModifyDelete")
+    public ModelAndView viewDogs() {
+        ModelAndView mv = new ModelAndView("viewDogs");
+        mv.addObject("dogs", dogRepo.findAll());
+        return mv;
+    }
+
+    @PostMapping("editDog")
+    public ModelAndView editDog(Dog dog) {
+        dogRepo.save(dog);
+        return new ModelAndView("redirect:/viewModifyDelete");
+    }
+
+    @PostMapping("deleteDog")
+    public ModelAndView deleteDog(@RequestParam("id") int id) {
+        dogRepo.deleteById(id);
+        return new ModelAndView("redirect:/viewModifyDelete");
+    }
+
+    @GetMapping("search")
+    public ModelAndView searchById(@RequestParam("id") int id) {
+        ModelAndView mv = new ModelAndView("searchResults");
+        mv.addObject("dog", dogRepo.findById(id).orElse(new Dog()));
+        return mv;
+    }
+
+    /* Trainer Operations */
+    @GetMapping("trainerAdded")
+    public ModelAndView addTrainerForm() {
+        return new ModelAndView("addNewTrainer");
+    }
+
+    @PostMapping("trainerAdded")
+    public ModelAndView addNewTrainer(Trainer trainer) {
+        trainerRepo.save(trainer);
+        return new ModelAndView("redirect:/dogHome");
+    }
 }
